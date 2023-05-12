@@ -1,4 +1,4 @@
-# network_visualization
+# network_visualization ( ... work in progress... )
 
 a short seminar on network visualization for PhD students
 
