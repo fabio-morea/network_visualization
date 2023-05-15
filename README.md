@@ -1,8 +1,10 @@
 # network_visualization ( ... work in progress... )
 
-a short seminar on network visualization for PhD students
+## A seminar on visualization of networks and communities
+## for students of "Statistican Alanysis of Networks" and PhD students
 
-pre-requisites: a basic knowledge of R and RStudio + Python interpreter installed 
+pre-requisites: installation of R and R Studio and basic knowledge of their use.
+optional: Python interpreter installed 
 
 ## topics:
   - Generation of LFR benchmark networks (Python + networkX library). Parameters and their effect on network structure

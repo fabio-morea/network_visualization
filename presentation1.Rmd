@@ -1,0 +1,197 @@
+---
+title: "network and community visualization"
+author: "Fabio Morea"
+date: "2023-05-13"
+output:
+  slidy_presentation: default
+  ioslides_presentation: default
+  beamer_presentation: default
+---
+
+```{r include=FALSE}
+# knitr manual: https://yihui.org/knitr/
+knitr::opts_chunk$set(echo = FALSE)
+
+
+```
+
+## Python libraries 
+
+```{python}
+import networkx as nx
+import numpy as np
+import pandas as pd
+import igraph as ig
+from networkx.generators.community import LFR_benchmark_graph
+
+import sklearn.metrics
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+```
+
+## function
+
+```{python}
+def add_true_labels(G):
+
+    cm = [(G.nodes[v]["community"]) for v in G]
+    unique_cm = []
+
+    # iterate through the list of sets
+    for set_ in cm:
+        # check if the set is already in the list of unique sets
+        if set_ not in unique_cm:
+            # if not, add it to the list of unique sets
+            unique_cm.append(set_)
+
+    df = pd.DataFrame(columns=['community']) 
+    for comm_id, members in enumerate(unique_cm):
+        for node in list(members):
+            df.at[node, 'community'] = comm_id + 1 
+            
+    nx.set_node_attributes(G, df.community, "community")
+    return(G)
+```
+
+## create benchmark
+
+```{python echo=TRUE}
+for mui in range(10,99,10):
+    print("generating benchmark for mu = ", mui/100)
+    G = LFR_benchmark_graph( mu=mui/100, 
+        n= 250,  
+        tau1 = 2, 
+        tau2 = 2, 
+        average_degree=5, 
+        min_community=30, 
+        seed=42)
+    gt = add_true_labels(G)
+    nx.write_gml(gt, f"FLR_benchmark_{mui}.gml")
+```
+
+
+## Read and display networks
+
+```{r include=FALSE}
+library(igraph)
+library(tidyverse)
+```
+
+## print mu = 10%
+```{r}
+mui = 10
+filename = paste0("FLR_benchmark_", mui, ".gml")
+print(paste("Loading graph...", filename))
+g <- read_graph(filename, format = "gml")
+LO = layout_with_fr(g)
+print(head(LO,10))
+
+```
+ 
+
+
+## plot function
+```{r}
+
+plot_graph_and_comms <- function(mu , show_comms = TRUE) {
+  filename = paste0("FLR_benchmark_", mu, ".gml")
+  print(paste("Benchmark network ", filename,"and communities (true-labels)"))
+  g <- read_graph(filename, format = "gml")
+  LO = layout_with_fr(g)
+  if (show_comms == TRUE) {
+    comms = table(V(g)$community)
+    comms = make_clusters(g,
+                          membership = V(g)$community,
+                          modularity = FALSE)
+    plot(
+      comms,
+      g,
+      vertex.color = V(g)$community,
+      layout = LO,
+      vertex.size = 5,
+      vertex.label = NA
+    )
+  } else {
+    plot(
+      g,
+      vertex.color = V(g)$community,
+      layout = LO,
+      vertex.size = 5,
+      vertex.label = NA
+    )
+    
+  }
+  return(1)
+}
+```
+
+## plot mu = 10%
+
+```{r}
+plot_graph_and_comms(mu = 10 , show_comms = FALSE) 
+```
+
+
+
+## plot mu = 50%
+
+```{r}
+plot_graph_and_comms(mu = 50 , show_comms = FALSE) 
+```
+
+```{r}
+
+mui = 80
+filename = paste0("FLR_benchmark_", mui, ".gml")
+print(paste("Loading graph...", filename))
+g <- read_graph(filename, format = "gml")
+components <- igraph::clusters(g, mode="weak")
+g <- induced_subgraph(g, V(g)[components$membership == which.max(components$csize)])
+
+
+selected_clusters = c(1,2,3,4)
+for (i in selected_clusters) stopifnot(i %in% unique(V(g)$community))
+
+
+V(g)$labels <- seq(1:gorder(g))
+
+
+g <- induced.subgraph(g, V(g)[ V(g)$community %in% selected_clusters]) 
+d = 20.0
+alpha <- 0
+dalpha <- 2 * pi / length(selected_clusters)
+
+newlay <- tibble(labels = as.integer(1),x = 0.0, y = 0.0)%>% 
+		head(0)
+
+for (i in selected_clusters) {
+	print(paste("processing community ", i))
+	temp <- induced.subgraph(g, V(g)$community == i)
+	labels <- V(temp)$labels
+	coords <- layout_with_fr(temp)# layout_with_kk(temp) #
+	coords[,1] <- coords[,1] + d * cos(alpha)  
+	coords[,2] <- coords[,2] + d * sin(alpha)
+	alpha <- alpha + dalpha
+	coords_tibble <- tibble(labels = labels, x = coords[,1], y = coords[,2])
+	newlay <- rbind(newlay,coords_tibble)
+	print(nrow(newlay))
+	print(nrow(coords_tibble))
+	
+}
+coords <- newlay %>%
+    	arrange(labels)%>%
+		select(x,y) %>%
+		as.matrix()
+
+plot(g, layout = coords, 
+    vertex.color = V(g)$community,
+	  vertex.label=NA,
+	  vertex.size = 5,
+	  edge.width = 2,
+	  edge.arrow.size = 0)
+
+print("Done")
+
+```
+
