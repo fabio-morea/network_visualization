@@ -1,9 +1,8 @@
-# network_visualization ( ... work in progress... )
+# A seminar on visualization of networks and communities 
+for students of "Statistican Alanysis of Networks" and PhD students
 
-## A seminar on visualization of networks and communities
-## for students of "Statistican Alanysis of Networks" and PhD students
-
-pre-requisites: installation of R and R Studio and basic knowledge of their use.
+## pre-requisites: 
+installation of R and R Studio and basic knowledge of their use.
 optional: Python interpreter installed 
 
 ## topics:
