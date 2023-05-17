@@ -1,7 +1,10 @@
 # A seminar on visualization of networks and communities 
-for students of "Statistican Alanysis of Networks" and PhD students
+for students of "Statistican Alanysis of Networks" and PhD students.
+
 **Date**: 16 / 05 /2023
+
 **Author**: Fabio Morea fabio.morea@areasciencepark.it   fabio.morea@phs.units.it
+
 **Acknowledgments**: this research work is supervided by prof. Domenico De Stefano, within the frame of PhD in Applied Data Science and Artificial Intelligence, at University of Trieste https://adsai.units.it/
 
 ## topics:
