@@ -1,7 +1,7 @@
 # A seminar on visualization of networks and communities 
 for students of "Statistican Alanysis of Networks" and PhD students.
 
-**Date**: 16 / 05 /2023
+**Date**: 16/05/2023
 
 **Author**: Fabio Morea fabio.morea@areasciencepark.it   fabio.morea@phs.units.it
 
