@@ -134,7 +134,8 @@ compare_clustering_results <- function(all_clusters,
 
 
 
-consensus_community_detection <- function(g,
+consensus_community_detection <- 
+  function(g,
            alphas,
            reps,
            n_trials,
@@ -144,38 +145,91 @@ consensus_community_detection <- function(g,
            min_vds,
            min_w,
            echo = FALSE) {
-  dfresults <- tibble(
-    rep = 0,
-    trial = 0,
-    a = 0.0,
-    r = 0.0,
-    method = "_",
-    modularit = 0.0,
-    nc = 0,
-    membership = list(),
-    #membership as community label
-    rob_mem = list()     #robustness of membership
-  ) %>% head(0)
+    dfresults <- tibble(
+      rep = 0,
+      trial = 0,
+      a = 0.0,
+      r = 0.0,
+      method = "_",
+      modularit = 0.0,
+      nc = 0,
+      membership = list(),
+      #membership as community label
+      rob_mem = list()     #robustness of membership
+    ) %>% head(0)
     
-  j <- 0
-  for (alpha in alphas) {
-    print(paste("Alpha", alpha))
-    for (rep in 1:reps) {
-      print(paste("Repetition", rep))
-      
-      all_clusters <- c()
-      for (i in 1:n_trials) {
-        #print(paste("Trial", i))
-        n_items <- length(E(g))
-        n_null <- as.integer(alpha * n_items)
-        applied_weights <- E(g)$ww
-        applied_weights[sample(n_items, n_null)] <- epsilon
-        E(g)$weight <- applied_weights
-        resol = as.numeric(sample(res, 1))
-        cluster_tmp <- cluster_louvain(g, weights = applied_weights , resolution = resol)
-        all_clusters <- cbind(all_clusters, cluster_tmp$membership)
-        m <- modularity (g,  cluster_tmp$membership)
-        mbs <- list(cluster_tmp$membership)
+    j <- 0
+    
+    for (alpha in alphas) {
+      print(paste("Alpha", alpha))
+      for (rep in 1:reps) {
+        print(paste("Repetition", rep))
+        
+        all_clusters <- c()
+        for (i in 1:n_trials) {
+          #print(paste("Trial", i))
+          n_items <- length(E(g))
+          n_null <- as.integer(alpha * n_items)
+          applied_weights <- E(g)$ww
+          applied_weights[sample(n_items, n_null)] <- epsilon
+          E(g)$weight <- applied_weights
+          resol = as.numeric(sample(res, 1))
+          cluster_tmp <- cluster_louvain(g, weights = applied_weights , resolution = resol)
+          all_clusters <- cbind(all_clusters, cluster_tmp$membership)
+          m <- modularity (g,  cluster_tmp$membership)
+          mbs <- list(cluster_tmp$membership)
+          
+          j <- j + 1
+          dfresults[j, ] <- list(
+            rep = rep,
+            trial = i,
+            a = alpha,
+            r = resol,
+            method = "LV",
+            modularit = m,
+            nc = max(cluster_tmp$membership),
+            membership  = list(mbs),
+            rob_mem = list(rep(NA, 0))       #robustness of membership
+          )
+        }
+        
+        ccs <- compare_clustering_results(
+          all_clusters,
+          min_p = min_p,
+          # proportion of membership below which a node is assigned to community 0
+          min_vids = min_vds,
+          # number of vertices below which a node is assigend to community 0
+          min_w = min_w,
+          echo = echo
+        )
+        
+        # (community weight / total network weight) below which a node is assigned to community 0
+        V(g)$comm_louvain <- 0
+        V(g)$rob_mem <- 0
+        
+        # #sort cluster by decreasing size
+        cl_conv_table = as.data.frame(table(ccs$mbshp)) %>%
+          rename(comm_size = Freq) %>%
+          rename(cccc = Var1) %>%
+          arrange(-comm_size)
+        
+        
+        
+        # if echo {print("assigning sorted cluster labels...")}
+        cl_new_labels <- 1
+        for (clid in cl_conv_table$cccc) {
+          selected_vids <- ccs %>%
+            filter(mbshp == clid) %>%
+            select(name) %>%
+            pull() %>%
+            unlist()
+          V(g)[V(g)$name %in% selected_vids]$comm_louvain <-
+            cl_new_labels
+          cl_new_labels <- cl_new_labels + 1
+        }
+        
+        V(g)$rob_mem <- ccs$prob
+        
         
         j <- j + 1
         dfresults[j, ] <- list(
@@ -183,44 +237,17 @@ consensus_community_detection <- function(g,
           trial = i,
           a = alpha,
           r = resol,
-          method = "LV",
-          modularit = m,
-          nc = max(cluster_tmp$membership),
-          membership  = list(mbs),
-          rob_mem = list(rep(NA, 0))       #robustness of membership
+          method = "CONS",
+          modularit = modularity(g, V(g)$comm_louvain + 1),
+          nc = max(V(g)$comm_louvain + 1),
+          membership  = list(V(g)$comm_louvain),
+          rob_mem = list(V(g)$rob_mem)
         )
       }
-      
-      # consensus 
-      ccs <- compare_clustering_results(
-        all_clusters,
-        min_p = min_p, # proportion of membership below which a node is assigned to community 0
-        min_vids = min_vds,# number of vertices below which a node is assigend to community 0
-        min_w = min_w,
-        echo = echo
-      )
-    
-      V(g)$comm_louvain <- ccs$mbshp
-      V(g)$rob_mem <- ccs$prob
-      
-      ## saving consensus results
-      j <- j + 1
-      dfresults[j, ] <- list(
-        rep = rep,
-        trial = i,
-        a = alpha,
-        r = resol,
-        method = "CONS",
-        modularit = modularity(g, V(g)$comm_louvain + 1),
-        nc = max(V(g)$comm_louvain + 1),
-        membership  = list(V(g)$comm_louvain),
-        rob_mem = list(V(g)$rob_mem)
-      )
     }
+    
+    return(dfresults)
   }
-  
-  return(dfresults)
-}
 
 
 
